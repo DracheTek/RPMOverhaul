@@ -27,6 +27,8 @@ namespace JSI
                 return false;
             //屏幕不存在，启动不完全，在编辑器内三种条件下直接返回。
 
+            GL.Clear(true, true, backgroundColorValue);//擦除屏幕
+
             Vector3 coM = vessel.findWorldCenterOfMass();//质心位置
             //这里的vessel变量是从InternalModule提取的。
             Vector3 up = (coM - vessel.mainBody.position).normalized;//质心位置减去几何中心位置，求单位向量
@@ -48,7 +50,6 @@ namespace JSI
 
             GL.LoadPixelMatrix(0, screen.width, screen.height, 0);//载入屏幕矩阵，准备渲染
             GL.Viewport(new Rect(0, 0, screen.width, screen.height));//载入视场
-
 
 
             foreach (InfoGauge gauge in gaugeList)//遍历信息条列表
@@ -111,9 +112,15 @@ namespace JSI
                         GL.Vertex3(gauge.Position.x, gauge.Position.y + gauge.Position.w, 0.0f);
                         GL.End();
                     }
+
                 }
-                GL.PopMatrix();//输出上述的矩阵
+                else
+                {
+                    JUtil.LogErrorMessage(this, "Material is null");
+                }
+
             }
+            GL.PopMatrix();//输出上述的矩阵
             return true;
         }
 
@@ -124,9 +131,6 @@ namespace JSI
             try
             {
                 backgroundColorValue = ConfigNode.ParseColor32(backgroundColor);
-                InfoGauge Gauge = new InfoGauge();//实例化信息条
-
-
                 foreach (ConfigNode propNode in GameDatabase.Instance.GetConfigNodes("PROP"))
                 {
                     ConfigNode[] moduleNodes = propNode.GetNodes("MODULE");
@@ -142,11 +146,32 @@ namespace JSI
                             foreach(ConfigNode bghandlerNode in bghandlerNodes)
                             {
                                 ConfigNode[] gaugeNodes = bghandlerNode.GetNodes("GAUGE");
-                                JUtil.LogErrorMessage(this, "node list created,node count is {0}", gaugeNodes.Length);
-                                for (int i = 0; i< gaugeNodes.Length; i++)
+                                foreach(ConfigNode node in gaugeNodes)
                                 {
-                                    gaugeList.Add(InfoGauge.ReadNode(gaugeNodes[i]));
-                                    JUtil.LogErrorMessage(this, "one item loaded");
+                                    InfoGauge gauge = new InfoGauge();
+                                    JUtil.LogErrorMessage(this, "one item created");
+                                    gauge.Texture = node.GetValue("Texture");
+                                    JUtil.LogErrorMessage(this, "texture obtained"); 
+                                    gauge.Position = ConfigNode.ParseVector4(node.GetValue("Position"));
+                                    JUtil.LogErrorMessage(this, "position obtained");
+                                    gauge.Limit = ConfigNode.ParseVector2(node.GetValue("Limit"));
+                                    JUtil.LogErrorMessage(this, "limit obtained");
+                                    gauge.TextureLimit = ConfigNode.ParseVector4(node.GetValue("TextureLimit"));
+                                    JUtil.LogErrorMessage(this, "texlim obtained");
+                                    gauge.TextureSize = float.Parse(node.GetValue("TextureSize"));
+                                    JUtil.LogErrorMessage(this, "texsiz obtained");
+                                    gauge.VerticalMovement = bool.Parse(node.GetValue("VerticalMovement"));
+                                    JUtil.LogErrorMessage(this, "vertmov obtained");
+                                    gauge.UseLog10 = bool.Parse(node.GetValue("UseLog10"));
+                                    JUtil.LogErrorMessage(this, "uselog obtained");
+                                    gauge.Use360Horizon = bool.Parse(node.GetValue("Use360Horizon"));
+                                    JUtil.LogErrorMessage(this, "360 obtained");
+                                    gauge.RotateWithVessel = bool.Parse(node.GetValue("RotateWithVessel"));
+                                    JUtil.LogErrorMessage(this, "rotate obtained");
+                                    gauge.Variable = node.GetValue("Variable");
+                                    JUtil.LogErrorMessage(this, "variable obtained");
+                                    gaugeList.Add(gauge);
+                                    JUtil.LogErrorMessage(this, "one item added");
                                 }
 
                             }
