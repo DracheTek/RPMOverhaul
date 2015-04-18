@@ -8,13 +8,24 @@ namespace JSI
 {
     class JSIHeadsUpDisplay : InternalModule
     {
+
+        [KSPField]
+        public string cameraTransform = string.Empty;
+        [KSPField]
+        public string backgroundColor = "0,0,0,0";
+        private Color32 backgroundColorValue;
+
+
+        private RasterPropMonitorComputer comp;//计算机系统实例
+        private bool startupComplete;//是否启动完成的变量
+        private List<InfoGauge> gaugeList = new List<InfoGauge>();
+
+
         public bool RenderHUD(RenderTexture screen, float cameraAspect)
         {
             if (screen == null || !startupComplete || HighLogic.LoadedSceneIsEditor)
                 return false;
             //屏幕不存在，启动不完全，在编辑器内三种条件下直接返回。
-
-            var Gauge = new InfoGauge();//实例化信息条
 
             Vector3 coM = vessel.findWorldCenterOfMass();//质心位置
             //这里的vessel变量是从InternalModule提取的。
@@ -40,9 +51,14 @@ namespace JSI
 
 
 
-            foreach (InfoGauge gauge in InfoGauge.gaugeList)//遍历信息条列表
+            foreach (InfoGauge gauge in gaugeList)//遍历信息条列表
             {
                 float value = comp.ProcessVariable(gauge.Variable).MassageToFloat();//用来存读入的变量
+                if (float.IsNaN(value))
+                {
+                    value = 0.0f;
+                }
+
                 if (gauge.Material != null)//读到信息条用的贴图
                 {
                     float midPointCoord;//贴图中点坐标。所有信息条统一用原本俯仰条的渲染方法。
@@ -108,9 +124,39 @@ namespace JSI
             try
             {
                 backgroundColorValue = ConfigNode.ParseColor32(backgroundColor);
+                InfoGauge Gauge = new InfoGauge();//实例化信息条
+
+
+                foreach (ConfigNode propNode in GameDatabase.Instance.GetConfigNodes("PROP"))
+                {
+                    ConfigNode[] moduleNodes = propNode.GetNodes("MODULE");
+
+                    foreach(ConfigNode moduleNode in moduleNodes)
+                    {
+                        ConfigNode[] pageNodes = moduleNode.GetNodes("PAGE");
+
+                        foreach(ConfigNode pagenode in pageNodes)
+                        {
+                            ConfigNode[] bghandlerNodes = pagenode.GetNodes("BACKGROUNDHANDLER");
+
+                            foreach(ConfigNode bghandlerNode in bghandlerNodes)
+                            {
+                                ConfigNode[] gaugeNodes = bghandlerNode.GetNodes("GAUGE");
+                                JUtil.LogErrorMessage(this, "node list created,node count is {0}", gaugeNodes.Length);
+                                for (int i = 0; i< gaugeNodes.Length; i++)
+                                {
+                                    gaugeList.Add(InfoGauge.ReadNode(gaugeNodes[i]));
+                                    JUtil.LogErrorMessage(this, "one item loaded");
+                                }
+
+                            }
+
+                        }
+                    }
+                }
 
                 Shader unlit = Shader.Find("Hidden/Internal-GUITexture");
-                foreach (InfoGauge gauge in InfoGauge.gaugeList)
+                foreach (InfoGauge gauge in gaugeList)
                 {
                     if (!String.IsNullOrEmpty(gauge.Texture))
                     {
@@ -124,6 +170,7 @@ namespace JSI
                         gauge.Limit.y = JUtil.PseudoLog10(gauge.Limit.y);
                     }
                 }
+                JUtil.LogMessage(this, "material read");
                 comp = RasterPropMonitorComputer.Instantiate(internalProp);
                 startupComplete = true;
             }
