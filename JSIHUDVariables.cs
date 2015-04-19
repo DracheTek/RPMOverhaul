@@ -16,7 +16,7 @@ namespace JSI
         public Vector2 Limit = new Vector2(0f, 10000f);
         [KSPField] // 贴图绘制的限度（上，下，左，右）
         public Vector4 TextureLimit = new Vector4(0.0f, 1.0f, 0.0f, 1.0f);
-        [KSPField] // 在绘图区绘制多少个像素（垂直缩放）
+        [KSPField] // 在绘图区绘制多少个像素
         public float TextureSize = 0.5f;
         [KSPField] // 调用的变量
         public string Variable = string.Empty;
@@ -38,7 +38,7 @@ namespace JSI
             Position = new Vector4(0f, 0f, 64f, 320f);
             Limit = new Vector2(0f, 10000f);
             TextureLimit = new Vector4(0.0f, 1.0f, 0.0f, 1.0f);
-            TextureSize = 0.5f;
+            TextureSize =0.5f;
             Variable = string.Empty;
             VerticalMovement = true;
             UseLog10 = true;
@@ -62,8 +62,7 @@ namespace JSI
                 gauge.Use360Horizon = bool.Parse(node.GetValue("Use360horizon"));
                 gauge.RotateWithVessel = bool.Parse(node.GetValue("RotateWithVessel"));
                 return gauge;
-             
-        }//这个函数从没用过 The Method is never used.
+        }
     }
 }
 
