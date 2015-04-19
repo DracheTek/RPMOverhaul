@@ -48,12 +48,14 @@ namespace JSI
 
             GL.PushMatrix();//保存运行前的状态。第一次运行显然为空
 
-            GL.LoadPixelMatrix(0, screen.width, screen.height, 0);//载入屏幕矩阵，准备渲染
-            GL.Viewport(new Rect(0, 0, screen.width, screen.height));//载入视场
+
 
 
             foreach (InfoGauge gauge in gaugeList)//遍历信息条列表
             {
+                GL.LoadPixelMatrix(-0.5f*screen.width, 0.5f*screen.width, 0.5f*screen.height, -0.5f*screen.height);//载入屏幕矩阵，准备渲染
+                //原点在屏幕中心
+                GL.Viewport(new Rect(0, 0, screen.width, screen.height));//载入视场
                 float value = comp.ProcessVariable(gauge.Variable).MassageToFloat();//用来存读入的变量
                 if (float.IsNaN(value))
                 {
@@ -80,21 +82,14 @@ namespace JSI
                         gauge.Material.SetPass(0);
                         GL.Begin(GL.QUADS);
 
-                        // transform -x -y
-                        GL.TexCoord2(0.5f + usedTextureSize.x, midPointCoord - textureOffset);
-                        GL.Vertex3(cosRoll * gauge.Position.z + sinRoll * gauge.Position.w, -sinRoll * gauge.Position.z + cosRoll * gauge.Position.w, 0.0f);
-
-                        // transform +x -y
-                        GL.TexCoord2(0.5f - usedTextureSize.x, midPointCoord - textureOffset);
-                        GL.Vertex3(-cosRoll * gauge.Position.z + sinRoll * gauge.Position.w, sinRoll * gauge.Position.z + cosRoll * gauge.Position.w, 0.0f);
-
-                        // transform +x +y
-                        GL.TexCoord2(0.5f - usedTextureSize.x, midPointCoord + textureOffset);
-                        GL.Vertex3(-cosRoll * gauge.Position.z - sinRoll * gauge.Position.w, sinRoll * gauge.Position.z - cosRoll * gauge.Position.w, 0.0f);
-
-                        // transform -x +y
-                        GL.TexCoord2(0.5f + usedTextureSize.x, midPointCoord + textureOffset);
-                        GL.Vertex3(cosRoll * gauge.Position.z - sinRoll * gauge.Position.w, -sinRoll * gauge.Position.z - cosRoll * gauge.Position.w, 0.0f);
+                        GL.TexCoord2(0.0f, midPointCoord + gauge.TextureSize);
+                        GL.Vertex3((cosRoll * gauge.Position.x + sinRoll * gauge.Position.y), (-sinRoll * gauge.Position.x + cosRoll * gauge.Position.y), 0.0f);
+                        GL.TexCoord2(1.0f, midPointCoord + gauge.TextureSize);
+                        GL.Vertex3((cosRoll * (gauge.Position.x+gauge.Position.z) + sinRoll * gauge.Position.y), (-sinRoll * (gauge.Position.x+gauge.Position.z) + cosRoll * gauge.Position.y), 0.0f);
+                        GL.TexCoord2(1.0f, midPointCoord - gauge.TextureSize);
+                        GL.Vertex3((cosRoll * (gauge.Position.x + gauge.Position.z) + sinRoll * (gauge.Position.y+gauge.Position.w)), (-sinRoll * (gauge.Position.x+gauge.Position.z) + cosRoll * (gauge.Position.y+gauge.Position.w)), 0.0f);
+                        GL.TexCoord2(0.0f, midPointCoord - gauge.TextureSize);
+                        GL.Vertex3((cosRoll * (gauge.Position.x) + sinRoll * (gauge.Position.y + gauge.Position.w)) , (-sinRoll * (gauge.Position.x) + cosRoll * (gauge.Position.y + gauge.Position.w)), 0.0f);
                         GL.End();
 
                     }
@@ -186,8 +181,27 @@ namespace JSI
                     if (!String.IsNullOrEmpty(gauge.Texture))
                     {
                         gauge.Material = new Material(unlit);
-                        gauge.Material.color = new Color(0.5f, 0.5f, 0.5f, 1.0f);
+                        gauge.Material.color = new Color(0.0f,0.0f,0.0f,0.0f);
                         gauge.Material.mainTexture = GameDatabase.Instance.GetTexture(gauge.Texture.EnforceSlashes(), false);
+                    }
+                    if (gauge.Material.mainTexture != null)
+                    {
+                        float height = (float)gauge.Material.mainTexture.height;
+                        float width = (float)gauge.Material.mainTexture.width;
+                        gauge.TextureLimit.x = 1.0f - (gauge.TextureLimit.x / width);
+                        gauge.TextureLimit.y = 1.0f - (gauge.TextureLimit.y / width);
+                        gauge.TextureLimit.z = 1.0f - (gauge.TextureLimit.z / height);
+                        gauge.TextureLimit.w = 1.0f - (gauge.TextureLimit.w / height);
+                        gauge.TextureSize = 0.5f * (gauge.TextureSize/ height);//实际调用的时候用的是宽和高的一半。
+                        if (gauge.Use360Horizon)
+                        {
+                            gauge.Material.mainTexture.wrapMode = TextureWrapMode.Repeat;
+                        }
+                        else
+                        {
+                            gauge.Material.mainTexture.wrapMode = TextureWrapMode.Clamp;
+                        }
+
                     }
                     if (gauge.UseLog10)
                     {
